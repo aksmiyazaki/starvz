@@ -34,6 +34,18 @@ hypothesis-checking for task-based applications that run on
 heterogeneous (multi-GPU, multi-core) multi-node HPC platforms.
 
 The source code of this framework is released under the GPLv3 license.
+** Branch Info - R Package
+This Branch is encapsulating the R functions in a package. With this,
+not only the organization of the functions is better (splited in
+multiples files), but is faster to read the library. Also, some
+dependencies can be made optional, and dont require to be read all
+times.
+
+This branch can be installed with =devtools=.
+
+#+begin_src R :results output :session *R* :exports both
+library(devtools)
+#+end_src
 
 ** Content
 - [[./INSTALL.org][Installation Instructions]]
