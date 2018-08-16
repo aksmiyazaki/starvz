@@ -52,6 +52,11 @@ getSlices <- function(dfv = NULL, step = 100)
 {
     tstart = dfv %>% .$Start %>% min;
     tend = (dfv %>% .$End %>% max);
+    # TODO: Explain how we ignore the last slice if tend is not multiple
+    # of step. This will make us ignore all behavior from the beginning
+    # of that last slice until tend. This is unimportant for visualization
+    # purposes but it can be important for stats. On that case, replace
+    # the second argument by =tend+step= to make sure all data is considered.
     slices = seq(0, tend, step);
     return(slices);
 }
