@@ -44,6 +44,7 @@ read_state_csv <- function (where = ".",
                             Iteration = col_character(),
                             Subiteration = col_character()
                         ));
+
         loginfo(paste("Read of", state.csv, "completed"));
     }else{
         stop(paste("Files", state.feather, "or", state.csv, "do not exist"));
@@ -215,6 +216,8 @@ read_vars_set_new_zero <- function (where = ".")
                             Duration = col_double(),
                             Value = col_double()
                         ));
+	#Remove Nature
+	dfv <- dfv %>% select(-Nature)
         loginfo(paste("Read of", variable.csv, "completed"));
     }else{
         stop(paste("Files", variable.feather, "or", variable.csv, "do not exist"));
@@ -357,6 +360,9 @@ the_reader_function <- function (directory = ".", app_states_fun = NULL, state_f
                            whichApplication = whichApplication) %>%
         hl_y_coordinates(where = directory);
 
+    #Remove Nature
+    dfw <- dfw %>% select(-Nature)
+
     # QRMumps case:
     # If the ATree is available and loaded, we create new columns for each task
     # to hold Y coordinates for the temporal elimination tree plot
@@ -418,11 +424,12 @@ the_reader_function <- function (directory = ".", app_states_fun = NULL, state_f
                  pmtool=dpmtb, pmtool_states=dpmts, data_handles=ddh, tasks=dtasks$tasks, task_handles=dtasks$handles, Events=devents);
 
     # Calculate the GAPS from the DAG
-    if (whichApplication == "cholesky"){
-        data$Gaps <- gaps(data);
-    }else{
+    #if (whichApplication == "cholesky"){
+    #    data$Gaps <- gaps(data);
+    #}else{
+    # TODO: reenable GAPS
         data$Gaps <- NULL;
-    }
+    #}
 
     return(data);
 }
@@ -580,7 +587,7 @@ pmtools_states_csv_parser <- function (where = ".", whichApplication = NULL, Y =
 
         pm[[3]] <- devices[pm[[3]]+1]
 
-        pm <- pm %>% left_join((Y %>% select(-Type, -Nature)), by=c("ResourceId" = "Parent"))
+        pm <- pm %>% left_join((Y %>% select(-Type)), by=c("ResourceId" = "Parent"))
         #print(States)
         #print(pm)
         pm <- pm %>% left_join((States %>% select(Iteration, JobId)), by=c("JobId" = "JobId"))
@@ -737,6 +744,8 @@ events_csv_parser <- function (where = ".")
                             Tid = col_character(),
                             Src = col_character()
                         ));
+	#Remove Nature
+	pm <- pm %>% select(-Nature)
         # sort the data by the start time
         pm <- pm[with(pm, order(Start)), ]
 
@@ -1028,6 +1037,8 @@ read_links <- function (where = ".")
                             Dest = col_character(),
                             Key = col_character()
                         ));
+	#Remove Nature
+	dfl <- dfl %>% select(-Nature)
         loginfo(paste("Read of", link.csv, "completed"));
     }else{
         loginfo(paste("Files", link.feather, "or", link.csv, "do not exist"));
