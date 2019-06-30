@@ -1,0 +1,27 @@
+19/05/29 23:07:52 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+19/05/29 23:07:53 INFO SparkContext: Running Spark version 2.4.3
+19/05/29 23:07:53 INFO SparkContext: Submitted application: sparklyr
+19/05/29 23:07:53 INFO SecurityManager: Changing view acls to: aksmiyazaki
+19/05/29 23:07:53 INFO SecurityManager: Changing modify acls to: aksmiyazaki
+19/05/29 23:07:53 INFO SecurityManager: Changing view acls groups to: 
+19/05/29 23:07:53 INFO SecurityManager: Changing modify acls groups to: 
+19/05/29 23:07:53 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users  with view permissions: Set(aksmiyazaki); groups with view permissions: Set(); users  with modify permissions: Set(aksmiyazaki); groups with modify permissions: Set()
+19/05/29 23:07:53 INFO Utils: Successfully started service 'sparkDriver' on port 38173.
+19/05/29 23:07:53 INFO SparkEnv: Registering MapOutputTracker
+19/05/29 23:07:53 INFO SparkEnv: Registering BlockManagerMaster
+19/05/29 23:07:53 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+19/05/29 23:07:53 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+19/05/29 23:07:53 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-b9a4e164-38ac-4de2-be1b-233e97043ee3
+19/05/29 23:07:53 INFO MemoryStore: MemoryStore started with capacity 2.9 GB
+19/05/29 23:07:53 INFO SparkEnv: Registering OutputCommitCoordinator
+19/05/29 23:07:53 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+19/05/29 23:07:53 INFO SparkUI: Bound SparkUI to 127.0.0.1, and started at http://localhost:4040
+19/05/29 23:07:53 INFO SparkContext: Added JAR file:/home/aksmiyazaki/R/x86_64-pc-linux-gnu-library/3.6/sparklyr/java/sparklyr-2.3-2.11.jar at spark://localhost:38173/jars/sparklyr-2.3-2.11.jar with timestamp 1559182073321
+19/05/29 23:07:53 INFO Executor: Starting executor ID driver on host localhost
+19/05/29 23:07:53 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 46615.
+19/05/29 23:07:53 INFO NettyBlockTransferService: Server created on localhost:46615
+19/05/29 23:07:53 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+19/05/29 23:07:53 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, localhost, 46615, None)
+19/05/29 23:07:53 INFO BlockManagerMasterEndpoint: Registering block manager localhost:46615 with 2.9 GB RAM, BlockManagerId(driver, localhost, 46615, None)
+19/05/29 23:07:53 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, localhost, 46615, None)
+19/05/29 23:07:53 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, localhost, 46615, None)
