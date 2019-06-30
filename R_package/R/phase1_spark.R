@@ -162,7 +162,6 @@ sp_read_state_csv <- function (sc = NULL,
 
     loginfo("Left joining the colors has completed.");
 
-
     # Specific cholesky colors: sufficiently harmless
     if (whichApplication == "cholesky"){
         loginfo("This is a cholesky application, colors are hard-coded");
@@ -212,10 +211,9 @@ sp_read_state_csv <- function (sc = NULL,
     # Get rid of all observations before ZERO
     dfw <- dfw %>% filter(Start >= 0);
 
-    return(dfw);
     # The problem is that Vinicius traces do not have "Iteration" column
     # We need to create it based on the Tag
-    if (data$State %>% filter(Application == TRUE) %>% head(., n=1) %>% collect %>% .$Iteration %>% is.na){
+    if (!('Iteration' %in% colnames(dfw))){
       stop("No examples of absence of Iteration Column, must check.");
         dfw <- dfw %>%
             mutate(Iteration = case_when(
@@ -359,8 +357,6 @@ spark_reader_function <- function (sc = NULL, hdfs_directory = ".", local_direct
                               whichApplication = whichApplication) %>%
             sp_hl_y_coordinates(where = local_directory);
 
-
-
     # QRMumps case:
     # If the ATree is available and loaded, we create new columns for each task
     # to hold Y coordinates for the temporal elimination tree plot
@@ -384,7 +380,7 @@ spark_reader_function <- function (sc = NULL, hdfs_directory = ".", local_direct
                           where = hdfs_directory, dfw, dfl);
 
     if (is.null(dfdag)){
-        stop('DAG is NULL');
+        stop('DAG is NULL, maybe it is Vinicius Traces DAG.');
         #TODO: Adapt Vinicius DAG for sparklyr
         # If dag is not available, try Vinicius DAG
         dagVinCSV <- paste0(directory, "/dag_vinicius.csv");
@@ -1021,7 +1017,22 @@ sp_gaps <- function (data)
       left_join(dfw, by=c("JobId" = "JobId"), suffix=c("_x", "_y")) %>%
       left_join(dfw, by=c("Dependent" = "JobId"), suffix=c("_x", "_y")) -> data.z.dag;
 
-  return(sdf_bind_rows(data.z.dag, data.b.dag, data.f.dag));
+  # This rename is necessary because right now it is out of the scope make changes
+  # in phase 2 of workflow (i don't have time either). This ensures the same names of the
+  # sequential phase of the framework.
+  gpdf <- sdf_bind_rows(data.z.dag, data.b.dag, data.f.dag)
+  gpdf <- gpdf %>%
+    rename(Value.x = Value_x) %>%
+    rename(ResourceId.x = ResourceId_x) %>%
+    rename(Node.x = Node_x) %>%
+    rename(Start.x = Start_x) %>%
+    rename(End.x = End_x) %>%
+    rename(Value.y = Value_y) %>%
+    rename(ResourceId.y = ResourceId_y) %>%
+    rename(Node.y = Node_y) %>%
+    rename(Start.y = Start_y) %>%
+    rename(End.y = End_y)
+  return(gpdf);
 }
 
 sp_read_links <- function (sc = NULL, where = ".")

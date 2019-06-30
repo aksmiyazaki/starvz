@@ -1,6 +1,5 @@
 #!/usr/bin/Rscript
 library(starvz)
-library(tictoc)
 library(sparklyr)
 library(dplyr)
 
@@ -99,28 +98,24 @@ if (input.application == "cholesky"){
 }else if (input.application == "cholesky_pastix") {
     states.fun = cholesky_pastix_colors;
     states.filter = 1;
-    }else if (input.application == "cfd") {
+}else if (input.application == "cfd") {
         states.fun = cfd_colors;
         states.filter = 1;
-    }else if (input.application == "") {
+}else if (input.application == "") {
         states.fun = cfd_colors;
         states.filter = 0;
-    }
+}
     
-    
-    
-    if(input.mode == applicationMode()$sequential){
-        data <- the_reader_function (directory = input.directory,
+
+if(input.mode == applicationMode()$sequential){
+    data <- the_reader_function (directory = input.directory,
                                  app_states_fun = states.fun,
                                  state_filter = states.filter,
                                  whichApplication = input.application);
-    }else{
-        if(input.time_measure) tic('INFO:: Setting up spark environment')
-        sc <- setup_spark_env(spark_master = input.spark_master,
-                              spark_home = input.spark_home);
-        if(input.time_measure) toc();
-        
-        
+}else{
+    sc <- setup_spark_env(spark_master = input.spark_master,
+                          spark_home = input.spark_home);
+
     source("/home/aksmiyazaki/git/starvz/R_package/R/phase1_spark.R")
     data <- NULL
     data <- spark_reader_function(sc = sc,
@@ -129,143 +124,183 @@ if (input.application == "cholesky"){
                                   app_states_fun = states.fun,
                                   state_filter = states.filter,
                                   whichApplication = input.application);
-    
-    
-    if(input.time_measure) toc()
+    data$Gaps %>% head
 }
 
-spark_disconnect_all();
 
-loginfo("Let's start to write the pre-processed files as feather data");
+loginfo("Start Output Writting");
 
 # State
-
-loginfo(paste("Writing", filename));
 if(input.mode == applicationMode()$sequential)
 {
     filename <- "pre.state.feather";
+    loginfo(paste("Writing", filename));
     if (!is.null(data$State)){
         write_feather(data$State, filename);
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
-    }    
+    }
+    
+    filename <- "pre.variable.feather";
+    loginfo(filename);
+    if (!is.null(data$Variable)){
+        write_feather(data$Variable, filename);
+    }else{
+        loginfo(paste("Data for", filename, "has not been feathered because is empty."));
+    }
+    
+    filename <- "pre.link.feather";
+    loginfo(filename);
+    if (!is.null(data$Link)){
+        write_feather(data$Link, filename);
+    }else{
+        loginfo(paste("Data for", filename, "has not been feathered because is empty."));
+    }
+    
+    filename <- "pre.dag.feather";
+    loginfo(filename);
+    if (!is.null(data$DAG)){
+        write_feather(data$DAG, filename);
+    }else{
+        loginfo(paste("Data for", filename, "has not been feathered because is empty."));
+    }
+    
+    filename <- "pre.y.feather";
+    loginfo(filename);
+    if (!is.null(data$Y)){
+        write_feather(data$Y, filename);
+    }else{
+        loginfo(paste("Data for", filename, "has not been feathered because is empty."));
+    }
+    
+    filename <- "pre.atree.feather";
+    loginfo(filename);
+    if (!is.null(data$ATree)){
+        write_feather(data$ATree, filename);
+    }else{
+        loginfo(paste("Data for", filename, "has not been feathered because is empty."));
+    }
+    
+    filename <- "pre.gaps.feather";
+    loginfo(filename);
+    if (!is.null(data$Gaps)){
+        write_feather(data$Gaps, filename);
+    }else{
+        loginfo(paste("Data for", filename, "has not been feathered because is empty."));
+    }
+    filename <- "pre.pmtool.feather";
+    loginfo(filename);
+    if (!is.null(data$pmtool)){
+        write_feather(data$pmtool, filename);
+    }else{
+        loginfo(paste("Data for", filename, "has not been feathered because is empty."));
+    }
+    filename <- "pre.pmtool_states.feather";
+    loginfo(filename);
+    if (!is.null(data$pmtool_states)){
+        write_feather(data$pmtool_states, filename);
+    }else{
+        loginfo(paste("Data for", filename, "has not been feathered because is empty."));
+    }
+    
+    # Data Rec
+    filename <- "pre.data_handles.feather";
+    loginfo(filename);
+    if (!is.null(data$data_handles)){
+        write_feather(data$data_handles, filename);
+    }else{
+        loginfo(paste("Data for", filename, "has not been feathered because is empty."));
+    }
+    
+    # Tasks Rec
+    filename <- "pre.tasks.feather";
+    loginfo(filename);
+    if (!is.null(data$tasks)){
+        write_feather(data$tasks, filename);
+    }else{
+        loginfo(paste("Data for", filename, "has not been feathered because is empty."));
+    }
+    
+    filename <- "pre.task_handles.feather";
+    loginfo(filename);
+    if (!is.null(data$task_handles)){
+        write_feather(data$task_handles, filename);
+    }else{
+        loginfo(paste("Data for", filename, "has not been feathered because is empty."));
+    }
+    
+    filename <- "pre.events.feather";
+    loginfo(filename);
+    if (!is.null(data$Events)){
+        write_feather(data$Events, filename);
+    }else{
+        loginfo(paste("Data for", filename, "has not been feathered because is empty."));
+    }
 }else{
     filename <- paste0(input.hdfs_dir, '/', "pre.state.parquet");
+    loginfo(paste("Writing", filename, 'on HDFS'));
     if (!is.null(data$State)){
         spark_write_parquet(data$State, filename, mode="overwrite");
         loginfo(paste("Data for", filename, "has been successfully wrote."));
     }else{
-        loginfo(paste("Data for", filename, "has not been feathered because is empty."));
-    }     
-}
-
-
-
-
-
-# Variable
-filename <- "pre.variable.feather";
-loginfo(filename);
-if (!is.null(data$Variable)){
-    write_feather(data$Variable, filename);
-}else{
-    loginfo(paste("Data for", filename, "has not been feathered because is empty."));
-}
-
-# Link
-filename <- "pre.link.feather";
-loginfo(filename);
-if (!is.null(data$Link)){
-    write_feather(data$Link, filename);
-}else{
-    loginfo(paste("Data for", filename, "has not been feathered because is empty."));
-}
-
-# DAG
-filename <- "pre.dag.feather";
-loginfo(filename);
-if (!is.null(data$DAG)){
-    write_feather(data$DAG, filename);
-}else{
-    loginfo(paste("Data for", filename, "has not been feathered because is empty."));
-}
-
-# Y
-filename <- "pre.y.feather";
-loginfo(filename);
-if (!is.null(data$Y)){
-    write_feather(data$Y, filename);
-}else{
-    loginfo(paste("Data for", filename, "has not been feathered because is empty."));
-}
-
-# ATree
-filename <- "pre.atree.feather";
-loginfo(filename);
-if (!is.null(data$ATree)){
-    write_feather(data$ATree, filename);
-}else{
-    loginfo(paste("Data for", filename, "has not been feathered because is empty."));
-}
-
-# Gaps
-filename <- "pre.gaps.feather";
-loginfo(filename);
-if (!is.null(data$Gaps)){
-    write_feather(data$Gaps, filename);
-}else{
-    loginfo(paste("Data for", filename, "has not been feathered because is empty."));
-}
-
-# PMtool
-filename <- "pre.pmtool.feather";
-loginfo(filename);
-if (!is.null(data$pmtool)){
-    write_feather(data$pmtool, filename);
-}else{
-    loginfo(paste("Data for", filename, "has not been feathered because is empty."));
-}
-
-filename <- "pre.pmtool_states.feather";
-loginfo(filename);
-if (!is.null(data$pmtool_states)){
-    write_feather(data$pmtool_states, filename);
-}else{
-    loginfo(paste("Data for", filename, "has not been feathered because is empty."));
-}
-
-# Data Rec
-filename <- "pre.data_handles.feather";
-loginfo(filename);
-if (!is.null(data$data_handles)){
-    write_feather(data$data_handles, filename);
-}else{
-    loginfo(paste("Data for", filename, "has not been feathered because is empty."));
-}
-
-# Tasks Rec
-filename <- "pre.tasks.feather";
-loginfo(filename);
-if (!is.null(data$tasks)){
-    write_feather(data$tasks, filename);
-}else{
-    loginfo(paste("Data for", filename, "has not been feathered because is empty."));
-}
-
-filename <- "pre.task_handles.feather";
-loginfo(filename);
-if (!is.null(data$task_handles)){
-    write_feather(data$task_handles, filename);
-}else{
-    loginfo(paste("Data for", filename, "has not been feathered because is empty."));
-}
-
-filename <- "pre.events.feather";
-loginfo(filename);
-if (!is.null(data$Events)){
-    write_feather(data$Events, filename);
-}else{
-    loginfo(paste("Data for", filename, "has not been feathered because is empty."));
+        loginfo(paste("Data for", filename, "has not been written because is empty."));
+    } 
+    
+    filename <- paste0(input.hdfs_dir, '/', "pre.variable.parquet");
+    loginfo(paste("Writing", filename, 'on HDFS'));
+    if (!is.null(data$Variable)){
+        spark_write_parquet(data$Variable, filename, mode="overwrite");
+        loginfo(paste("Data for", filename, "has been successfully wrote."));
+    }else{
+        loginfo(paste("Data for", filename, "has not been written because is empty."));
+    }
+    
+    filename <- paste0(input.hdfs_dir, '/', "pre.link.parquet");
+    loginfo(paste("Writing", filename, 'on HDFS'));
+    if (!is.null(data$Link)){
+        spark_write_parquet(data$Link, filename, mode="overwrite");
+        loginfo(paste("Data for", filename, "has been successfully wrote."));
+    }else{
+        loginfo(paste("Data for", filename, "has not been written because is empty."));
+    }
+    
+    filename <- paste0(input.hdfs_dir, '/', "pre.dag.parquet");
+    loginfo(paste("Writing", filename, 'on HDFS'));
+    if (!is.null(data$DAG)){
+        spark_write_parquet(data$DAG, filename, mode="overwrite");
+        loginfo(paste("Data for", filename, "has been successfully wrote."));
+    }else{
+        loginfo(paste("Data for", filename, "has not been written because is empty."));
+    }
+    
+    filename <- paste0(input.hdfs_dir, '/', "pre.y.parquet");
+    loginfo(paste("Writing", filename, 'on HDFS'));
+    if (!is.null(data$Y)){
+        spark_write_parquet(data$Y, filename, mode="overwrite");
+        loginfo(paste("Data for", filename, "has been successfully wrote."));
+    }else{
+        loginfo(paste("Data for", filename, "has not been written because is empty."));
+    }
+    
+    filename <- paste0(input.hdfs_dir, '/', "pre.atree.parquet");
+    loginfo(paste("Writing", filename, 'on HDFS'));
+    if (!is.null(data$ATree)){
+        spark_write_parquet(data$ATree, filename, mode="overwrite");
+        loginfo(paste("Data for", filename, "has been successfully wrote."));
+    }else{
+        loginfo(paste("Data for", filename, "has not been written because is empty."));
+    }
+    
+    filename <- paste0(input.hdfs_dir, '/', "pre.events.parquet");
+    loginfo(paste("Writing", filename, 'on HDFS'));
+    if (!is.null(data$Events)){
+        spark_write_parquet(data$Events, filename, mode="overwrite");
+        loginfo(paste("Data for", filename, "has been successfully wrote."));
+    }else{
+        loginfo(paste("Data for", filename, "has not been written because is empty."));
+    }
+    
+    spark_disconnect_all();
 }
 
 loginfo("Pre-process finished correctly.");
