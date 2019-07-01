@@ -116,7 +116,7 @@ if(input.mode == applicationMode()$sequential){
     sc <- setup_spark_env(spark_master = input.spark_master,
                           spark_home = input.spark_home);
 
-    source("/home/aksmiyazaki/git/starvz/R_package/R/phase1_spark.R")
+    #source("/home/aksmiyazaki/git/starvz/R_package/R/phase1_spark.R")
     data <- NULL
     data <- spark_reader_function(sc = sc,
                                   hdfs_directory = input.hdfs_dir,
