@@ -41,6 +41,28 @@ sp_read_state_csv <- function (sc = NULL,
                              state.csv,
                              header = TRUE,
                              delimiter = ',',
+                             infer_schema = FALSE,
+                             columns = list(
+                               Nature = "character",
+                               ResourceId = "character",
+                               Type = "character",
+                               Start = "double",
+                               End = "double",
+                               Duration = "double",
+                               Depth = "double",
+                               Value = "character",
+                               Size = "character",
+                               Params = "character",
+                               Footprint = "character",
+                               Tag = "character",
+                               JobId = "character",
+                               GFlop = "character",
+                               SubmitOrder = "character",
+                               X = "character",
+                               Y = "character",
+                               Iteration = "character",
+                               Subiteration = "character"
+                             ),
                              null_value = NA,
                              charset = 'us-ascii',
                              options=list(ignoreLeadingWhiteSpace = TRUE, ignoreTrailingWhiteSpace = TRUE)),
@@ -49,16 +71,15 @@ sp_read_state_csv <- function (sc = NULL,
     loginfo(paste("Read state CSV in [", state.csv, "]"));
 
     loginfo(paste("Starting CSV Manipulation [", state.csv, "]"));
-
     if ((dfw %>% sdf_nrow) == 0) stop("After reading states, number of rows is zero.");
+
 
     # TODO: QRMumps: fix qrmumps kernels names so we have a clean color definition
     if (whichApplication == "qrmumps"){
-      stop('NOT IMPLEMENTED APPLICATION QRMUMPS')
-    #    dfw <- dfw %>%
-    #        mutate(Value = gsub("_perf.*", "", Value)) %>%
-    #        mutate(Value = gsub("qrm_", "", Value));
-    #    loginfo("Fix of qrmumps state naming completed.");
+        dfw <- dfw %>%
+            mutate(Value = regexp_replace(Value, "_perf.*", "")) %>%
+            mutate(Value = regexp_replace(Value, "qrm_", ""));
+        loginfo("Fix of qrmumps state naming completed.");
     }
 
     # Split application and starpu behavior
@@ -67,19 +88,20 @@ sp_read_state_csv <- function (sc = NULL,
     # 1 = Based on stricted application name states
     # 2 = Based on non-stricted application name states
     if (state_filter == 0){
-        loginfo("Selecting application states based on runtime states.");
-        dfw <- dfw %>% mutate(Application = case_when( .$Value %in% all_starpu_states() ~ FALSE, TRUE ~ TRUE));
+      loginfo("Selecting application states based on runtime states.");
+      dfw <- dfw %>% mutate(Application = case_when( .$Value %in% all_starpu_states() ~ FALSE, TRUE ~ TRUE));
     }else if (state_filter == 1){
-        loginfo("Selecting application states based on custom application stricted states names.");
-        # If strict, states need to be exact
-        dfw <- dfw %>% mutate(Application = case_when(.$Value %in% (app_state_df %>% .$Kernel) ~ TRUE, TRUE ~ FALSE));
+      loginfo("Selecting application states based on custom application stricted states names.");
+      # If strict, states need to be exact
+      arr <- app_states_fun() %>% .$Kernel
+      dfw <- dfw %>%
+        mutate(Application = case_when((Value %in% arr) ~ TRUE, TRUE ~ FALSE));
     }else if (state_filter == 2){
-        loginfo("Selecting application states based on custom application non-stricted states names.");
-        # If not strict, we mark using app_state_df() Kernel field as RE
-        state_condition = paste((app_states_fun() %>% .$Kernel), collapse='|');
-        dfw <- dfw %>% mutate(Application = case_when(rlike(Value, state_condition) ~ TRUE, TRUE ~ FALSE));
+      loginfo("Selecting application states based on custom application non-stricted states names.");
+      # If not strict, we mark using app_state_df() Kernel field as RE
+      state_condition = paste((app_states_fun() %>% .$Kernel), collapse='|');
+      dfw <- dfw %>% mutate(Application = case_when(rlike(Value, state_condition) ~ TRUE, TRUE ~ FALSE));
     }
-
 
     if ((dfw %>% sdf_nrow) == 0) stop("After application states check, number of rows is zero.");
 
@@ -137,7 +159,6 @@ sp_read_state_csv <- function (sc = NULL,
           unique;
 
     }else{
-
       # Define colors
       dfcolors <- dfw %>%
         select(Value) %>%
@@ -214,14 +235,14 @@ sp_read_state_csv <- function (sc = NULL,
     # The problem is that Vinicius traces do not have "Iteration" column
     # We need to create it based on the Tag
     if (!('Iteration' %in% colnames(dfw))){
-      stop("No examples of absence of Iteration Column, must check.");
+      stop('Probably error in as.integer with hex no');
         dfw <- dfw %>%
             mutate(Iteration = case_when(
-                       rlike(Value, "potrf") ~ as.integer(paste0("0x", substr(Tag, 14, 16))),
-                       rlike(Value, "trsm") ~ as.integer(paste0("0x", substr(Tag, 11, 13))),
-                       rlike(Value, "syrk") ~ as.integer(paste0("0x", substr(Tag, 8, 10))),
-                       rlike(Value, "gemm") ~ as.integer(paste0("0x", substr(Tag, 8, 10))),
-                       TRUE ~ as.integer(-10)));
+                       rlike(Value, "potrf") ~ as.character(paste0("0x", substr(Tag, 14, 16))),
+                       rlike(Value, "trsm") ~ as.character(paste0("0x", substr(Tag, 11, 13))),
+                       rlike(Value, "syrk") ~ as.character(paste0("0x", substr(Tag, 8, 10))),
+                       rlike(Value, "gemm") ~ as.character(paste0("0x", substr(Tag, 8, 10))),
+                       TRUE ~ as.character('-A')));
     }
 
     # QRMumps case:
@@ -230,8 +251,9 @@ sp_read_state_csv <- function (sc = NULL,
     # appropriate ANode using the following code. We do that for all kind
     # of traces, but the ANode column is only valid for the qr_mump traces.
     if (whichApplication == "qrmumps"){
-        stop("Untested application qrmumps.");
-        dfw <- dfw %>% mutate(ANode = NA, ANode = as.character(strtoi(as.integer(paste0("0x", substr(Tag, 9, 16))))));
+        loginfo("Setting ANode based on TAG");
+        dfw <- dfw %>%
+          mutate(ANode=case_when((is.na(Tag) == FALSE) ~ as.character(paste0("0x", substr(Tag, 9, 16))), TRUE ~ NA))
     }
 
     return(dfw);
@@ -279,19 +301,43 @@ sp_read_vars_set_new_zero <- function (sc = NULL, where = ".")
 }
 
 sp_atree_load <- function(sc = NULL, where = "."){
+    atree.feather = paste0(where, "/atree.feather");
     atree.csv = paste0(where, "/atree.csv");
-    df <- NULL;
 
-    loginfo(paste0("Trying to get atree.csv in [", atree.csv, "]"));
-    try(df <- spark_read_csv(sc, "atree", atree.csv, header = TRUE, charset = 'us-ascii'), silent = TRUE)
-
-    if(is.null(df)){
-        loginfo(paste("File", atree.csv, "do not exist."));
-        return(NULL);
+    if (file.exists(atree.feather)){
+      loginfo(paste("Reading ", atree.feather));
+      df <- read_feather(atree.feather);
+    }else if (file.exists(atree.csv)){
+      loginfo(paste("Reading ", atree.csv));
+      df <- read_csv(file=atree.csv,
+                     trim_ws=TRUE,
+                     progress=TRUE,
+                     col_types=cols(
+                       Node = col_integer(),
+                       DependsOn = col_integer()
+                     ));
     }else{
-      loginfo("TODO: not implemented.")
+      loginfo(paste("Files", atree.feather, "or", atree.csv, "do not exist."));
+      return(NULL);
     }
 
+    intermediary_nodes <- df %>% select(Node) %>% .$Node %>% unique;
+
+    loginfo(paste("Calculating graphical properties of the elimination tree"));
+
+    df %>%
+      # Mutate things to character since data.tree don't like anything else
+      mutate(Node = as.character(Node), DependsOn = as.character(DependsOn)) %>%
+      # Convert to data.frame to avoid compatibility issues between tibble and data.tree
+      as.data.frame() %>%
+      # Convert to data.tree object
+      as.Node(mode="network") %>%
+      # Calculate Y coordinates
+      atree_coordinates %>%
+      # Convert back to data frame
+      atree_to_df %>%
+      # Mark intermediary nodes
+      mutate(Intermediary = case_when(.$ANode %in% intermediary_nodes ~ TRUE, TRUE ~ FALSE)) -> df;
     return(df);
 }
 
@@ -346,16 +392,19 @@ spark_reader_function <- function (sc = NULL, hdfs_directory = ".", local_direct
 
     # Read the elimination tree
     dfa <- sp_atree_load(sc = sc,
-                         where = hdfs_directory);
+                         where = local_directory);
 
     # Read states
-
     dfw <- sp_read_state_csv (sc = sc,
                               where = hdfs_directory,
                               app_states_fun=app_states_fun,
                               state_filter=state_filter,
-                              whichApplication = whichApplication) %>%
-            sp_hl_y_coordinates(where = local_directory);
+                              whichApplication = whichApplication); #%>%
+                              #sp_hl_y_coordinates(where = local_directory);
+
+    data <- list(DistributedOrigin=hdfs_directory, LocalOrigin=local_directory, State=dfw, ATree=dfa);
+
+    return(data);
 
     # QRMumps case:
     # If the ATree is available and loaded, we create new columns for each task

@@ -81,11 +81,11 @@ if(debugging == FALSE)
 }else{
     input.spark_master <- 'yarn';
     input.mode <- applicationMode()$distributed;
-    input.hdfs_dir <- '/user/aksmiyazaki/inputs';
-    input.local_dir <- '/home/aksmiyazaki/tcc_data/5-v8-4_chifflet_8_6_2_dmdas_dpotrf_4_96000_960_false_ETHERNET10GB_true_r21909_10.dir/5-v8-4_chifflet_8_6_2_dmdas_dpotrf_4_96000_960_false_ETHERNET10GB_true_r21909_10_fxt'
-    input.application <- 'cholesky';
+    input.hdfs_dir <- '/user/aksmiyazaki/inputs_qrmumps';
+    input.local_dir <- '/home/aksmiyazaki/tcc_data/lws_TF18_5_640_128_2'
+    input.application <- 'qrmumps';
     input.spark_home <- NULL;
-    input.verbose = TRUE;
+    input.verbose = TRUE
     input.time_measure = TRUE;
 }
 
@@ -116,7 +116,7 @@ if(input.mode == applicationMode()$sequential){
     sc <- setup_spark_env(spark_master = input.spark_master,
                           spark_home = input.spark_home);
 
-    #source("/home/aksmiyazaki/git/starvz/R_package/R/phase1_spark.R")
+    source("/home/aksmiyazaki/git/starvz/R_package/R/phase1_spark.R")
     data <- NULL
     data <- spark_reader_function(sc = sc,
                                   hdfs_directory = input.hdfs_dir,
@@ -124,7 +124,19 @@ if(input.mode == applicationMode()$sequential){
                                   app_states_fun = states.fun,
                                   state_filter = states.filter,
                                   whichApplication = input.application);
-    data$Gaps %>% head
+    data$State %>% head
+    data$State %>% group_by(ANode) %>% summarise(Count = n())
+    data$State %>% group_by(Tag) %>% summarise(Count = n())
+    
+    data$ATree
+    
+    data$State %>% 
+        filter(is.na(Tag) == FALSE) %>% 
+        invoke()
+        mutate(TEST = case_when((is.na(Tag) == FALSE) ~ native_integer("0xA"), TRUE ~ NA)) %>% 
+        head
+    
+    data$State %>% mutate(TEST=case_when((is.na(Tag) == FALSE) ~ as.character(as.integer(paste0("0x", substr(Tag, 9, 16)))), TRUE ~ NA)) %>% group_by(TEST) %>% summarise(Count = n())
 }
 
 
