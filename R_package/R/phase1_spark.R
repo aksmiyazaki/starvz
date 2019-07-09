@@ -42,6 +42,28 @@ sp_read_state_csv <- function (sc = NULL,
                              header = TRUE,
                              delimiter = ',',
                              null_value = NA,
+                             infer_schema=FALSE,
+                             columns=list(
+                               Nature = "character",
+                               ResourceId = "character",
+                               Type = "character",
+                               Start = "double",
+                               End = "double",
+                               Duration = "double",
+                               Depth = "double",
+                               Value = "character",
+                               Size = "character",
+                               Params = "character",
+                               Footprint = "character",
+                               Tag = "character",
+                               JobId = "character",
+                               GFlop = "character",
+                               SubmitOrder = "character",
+                               X = "character",
+                               Y = "character",
+                               Iteration = "character",
+                               Subiteration = "character"
+                             ),
                              charset = 'us-ascii',
                              options=list(ignoreLeadingWhiteSpace = TRUE, ignoreTrailingWhiteSpace = TRUE)),
                             silent = TRUE);
@@ -97,19 +119,21 @@ sp_read_state_csv <- function (sc = NULL,
     loginfo(paste("First Resource ID is", as.character(firstResourceId[1])));
 
     if (grepl("CUDA|CPU", unlist(strsplit(as.character(firstResourceId[1]), "_"))[2])){
-        loginfo("This is multi-node trace");
-        # This is the case for multi-node trace
-        dfw <- dfw %>%
-          mutate(Resource = ResourceId) %>%
-          mutate(Node = as.integer(substr(ResourceId, 1, 1))) %>%
-          mutate(ResourceType = as.character(regexp_replace(ResourceId, '[0-9_]+', '')))
+      loginfo("This is multi-node trace");
+      # This is the case for multi-node trace
+      dfw <- dfw %>%
+        ft_regex_tokenizer("ResourceId", "Temp", pattern="_", to_lower_case=FALSE) %>%
+        sdf_separate_column("Temp", into=c("Node", "Resource")) %>%
+        select(-Temp) %>%
+        mutate(Node = as.integer(Node)) %>%
+        mutate(ResourceType = as.character(regexp_replace(ResourceId, '[0-9_]+', '')));
     }else{
-        loginfo("This is a single-node trace...");
-        # This is the case for SINGLE node trace
-        dfw <- dfw %>%
-          mutate(Resource = ResourceId) %>%
-          mutate(Node = 0) %>%
-          mutate(ResourceType = as.character(regexp_replace(ResourceId, '[0-9_]+', '')))
+      loginfo("This is a single-node trace...");
+      # This is the case for SINGLE node trace
+      dfw <- dfw %>%
+        mutate(Resource = regexp_replace(ResourceId, '^[0-9_]+', '')) %>%
+        mutate(Node = 0) %>%
+        mutate(ResourceType = as.character(regexp_replace(ResourceId, '[0-9_]+', '')))
     }
 
     loginfo("Node, Resource, ResourceType definition is ready");
@@ -248,6 +272,16 @@ sp_read_vars_set_new_zero <- function (sc = NULL, where = ".")
                               header = TRUE,
                               delimiter = ',',
                               null_value = NA,
+                              infer_schema=FALSE,
+                              columns = list(
+                                Nature = "character",
+                                ResourceId = "character",
+                                Type = "character",
+                                Start = "double",
+                                End = "double",
+                                Duration = "double",
+                                Value = "double"
+                              ),
                               charset = 'us-ascii',
                               options=list(ignoreLeadingWhiteSpace = TRUE, ignoreTrailingWhiteSpace = TRUE)),
         silent = TRUE);
@@ -265,7 +299,10 @@ sp_read_vars_set_new_zero <- function (sc = NULL, where = ".")
       filter(Start >= 0, End >= 0) %>%
       # create three new columns (Node, Resource, ResourceType)
       # This is StarPU-specific
-      mutate(Node = as.integer(substr(ResourceId, 1, 1))) %>%
+      ft_regex_tokenizer("ResourceId", "Temp", pattern="_", to_lower_case=FALSE) %>%
+      sdf_separate_column("Temp", into=c("Node", "Resource")) %>%
+      select(-Temp) %>%
+      mutate(Node = as.integer(Node)) %>%
       mutate(ResourceType = as.character(regexp_replace(ResourceId, '[0-9_]+', ''))) %>%
       # manually rename variables names
       # Attention: first, the beautiful 4 backslash escape to special characters and the mutate chain
@@ -279,11 +316,22 @@ sp_read_vars_set_new_zero <- function (sc = NULL, where = ".")
 }
 
 sp_atree_load <- function(sc = NULL, where = "."){
+
+    stop('Atree load isnt implemented');
     atree.csv = paste0(where, "/atree.csv");
     df <- NULL;
 
     loginfo(paste0("Trying to get atree.csv in [", atree.csv, "]"));
-    try(df <- spark_read_csv(sc, "atree", atree.csv, header = TRUE, charset = 'us-ascii'), silent = TRUE)
+    try(df <- spark_read_csv(sc,
+                             "atree",
+                             atree.csv,
+                             header = TRUE,
+                             infer_schema = FALSE,
+                             columns = list(
+                               Node = "integer",
+                               DependsOn = "integer"
+                             ),
+                             charset = 'us-ascii'), silent = TRUE)
 
     if(is.null(df)){
         loginfo(paste("File", atree.csv, "do not exist."));
@@ -349,7 +397,6 @@ spark_reader_function <- function (sc = NULL, hdfs_directory = ".", local_direct
                          where = hdfs_directory);
 
     # Read states
-
     dfw <- sp_read_state_csv (sc = sc,
                               where = hdfs_directory,
                               app_states_fun=app_states_fun,
@@ -429,8 +476,6 @@ spark_reader_function <- function (sc = NULL, hdfs_directory = ".", local_direct
     data <- list(DistributedOrigin=hdfs_directory, LocalOrigin=local_directory, State=dfw, Variable=dfv, Link=dfl, DAG=dfdag, Y=dfhie, ATree=dfa,
                  pmtool=dpmtb, pmtool_states=dpmts, data_handles=ddh, tasks=dtasks$tasks, task_handles=dtasks$handles, Events=devents);
 
-
-
     # Calculate the GAPS from the DAG
     if (whichApplication == "cholesky"){
         data$Gaps <- sp_gaps(data);
@@ -494,6 +539,7 @@ hl_y_paje_tree <- function (where = ".")
 
 pmtools_bounds_csv_parser <- function (where = ".")
 {
+  stop('')
     entities.feather = paste0(where, "/pmtool.feather");
     entities.csv = paste0(where, "/pmtool.csv");
 
@@ -735,6 +781,19 @@ sp_events_csv_parser <- function (sc = NULL, where = ".")
                               header = TRUE,
                               delimiter = ',',
                               null_value = NA,
+                              infer_schema = FALSE,
+                              columns = list(
+                                Nature = "character",
+                                Container = "character",
+                                Type = "character",
+                                Start = "double",
+                                Value = "character",
+                                Handle = "character",
+                                Info = "integer",
+                                Size = "integer",
+                                Tid = "character",
+                                Src = "character"
+                              ),
                               charset = 'us-ascii',
                               options=list(ignoreLeadingWhiteSpace = TRUE, ignoreTrailingWhiteSpace = TRUE)),
                 silent = TRUE);
@@ -922,7 +981,7 @@ sp_gaps.f_forward <- function (data)
 {
     # Create the seed chain
     tmpdag <- data$DAG %>%
-      filter(rlike(JobId, "mpicom"))
+      filter(rlike(Dependent, "mpicom"))
 
     if(is.null(tmpdag) || (tmpdag %>% sdf_nrow) == 0)
       tmpdag <- data$DAG
@@ -1021,6 +1080,7 @@ sp_gaps <- function (data)
   # in phase 2 of workflow (i don't have time either). This ensures the same names of the
   # sequential phase of the framework.
   gpdf <- sdf_bind_rows(data.z.dag, data.b.dag, data.f.dag)
+
   gpdf <- gpdf %>%
     rename(Value.x = Value_x) %>%
     rename(ResourceId.x = ResourceId_x) %>%
@@ -1046,6 +1106,19 @@ sp_read_links <- function (sc = NULL, where = ".")
                               header = TRUE,
                               delimiter = ',',
                               null_value = NA,
+                              infer_schema = FALSE,
+                              columns = list(
+                                Nature = "character",
+                                Container = "character",
+                                Type = "character",
+                                Start = "double",
+                                End = "double",
+                                Duration = "double",
+                                Size = "integer",
+                                Origin = "character",
+                                Dest = "character",
+                                Key = "character"
+                              ),
                               charset = 'us-ascii',
                               options=list(ignoreLeadingWhiteSpace = TRUE, ignoreTrailingWhiteSpace = TRUE)),
         silent = TRUE);
@@ -1080,6 +1153,11 @@ sp_read_dag <- function (sc = NULL, where = ".", dfw = NULL, dfl = NULL)
                               header = TRUE,
                               delimiter = ',',
                               null_value = NA,
+                              infer_schema = FALSE,
+                              columns = list(
+                                Dependent = "character",
+                                JobId = "character"
+                              ),
                               charset = 'us-ascii',
                               options=list(ignoreLeadingWhiteSpace = TRUE, ignoreTrailingWhiteSpace = TRUE)),
         silent = TRUE);
@@ -1113,19 +1191,22 @@ sp_read_dag <- function (sc = NULL, where = ".", dfw = NULL, dfl = NULL)
         loginfo("Get MPI tasks (links) to enrich the DAG");
 
         dfdagl <- dfdag %>%
-            # Get only MPI tasks JobIds
-            filter(rlike(JobId, "mpicom"))  %>%
-            # Merge MPI communicaton task information from the trace (links: dfl)
-            full_join(dfl, by=c("JobId" = "Key")) %>%
-            # Align columns with state-based tasks
-            # 1. Remove columns
-            select(-Container, -Origin) %>%
-            # 2. Change types
-            mutate(Size = as.character(Size)) %>%
-            # 3. Dest becomes ResourceId for these MPI tasks
-            rename(ResourceId = Dest) %>%
-            mutate(Node = as.integer(substr(ResourceId, 1, 1))) %>%
-            mutate(ResourceType = as.character(regexp_replace(ResourceId, '[0-9_]+', '')));
+          # Get only MPI tasks JobIds
+          filter(rlike(JobId, "mpicom"))  %>%
+          # Merge MPI communicaton task information from the trace (links: dfl)
+          full_join(dfl, by=c("JobId" = "Key")) %>%
+          # Align columns with state-based tasks
+          # 1. Remove columns
+          select(-Container, -Origin) %>%
+          # 2. Change types
+          mutate(Size = as.character(Size)) %>%
+          # 3. Dest becomes ResourceId for these MPI tasks
+          rename(ResourceId = Dest) %>%
+          ft_regex_tokenizer("ResourceId", "Temp", pattern="_", to_lower_case=FALSE) %>%
+          sdf_separate_column("Temp", into=c("Node", "Resource")) %>%
+          select(-Temp) %>%
+          mutate(Node = as.integer(Node)) %>%
+          mutate(ResourceType = as.character(regexp_replace(ResourceId, '[0-9_]+', '')));
 
         dfdag <- dfdags %>% sdf_bind_rows(dfdagl);
 

@@ -115,16 +115,13 @@ if(input.mode == applicationMode()$sequential){
 }else{
     sc <- setup_spark_env(spark_master = input.spark_master,
                           spark_home = input.spark_home);
-
-    #source("/home/aksmiyazaki/git/starvz/R_package/R/phase1_spark.R")
-    data <- NULL
+    
     data <- spark_reader_function(sc = sc,
                                   hdfs_directory = input.hdfs_dir,
                                   local_directory = input.local_dir,
                                   app_states_fun = states.fun,
                                   state_filter = states.filter,
                                   whichApplication = input.application);
-    data$Gaps %>% head
 }
 
 
