@@ -316,8 +316,6 @@ sp_read_vars_set_new_zero <- function (sc = NULL, where = ".")
 }
 
 sp_atree_load <- function(sc = NULL, where = "."){
-
-    stop('Atree load isnt implemented');
     atree.csv = paste0(where, "/atree.csv");
     df <- NULL;
 
@@ -337,7 +335,7 @@ sp_atree_load <- function(sc = NULL, where = "."){
         loginfo(paste("File", atree.csv, "do not exist."));
         return(NULL);
     }else{
-      loginfo("TODO: not implemented.")
+      stop('Atree load isnt implemented');
     }
 
     return(df);

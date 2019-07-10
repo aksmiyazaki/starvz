@@ -9,9 +9,16 @@ source("/home/aksmiyazaki/git/starvz/R_package/R/phase1_spark.R")
 ##############################
 # Usage                      #
 ##############################
-usage <- function ()
+base_usage <- function(){
+    stop('Usage: Call it with one of the following params:\n  -S For sequential execution.\n  -D for distributed spark execution.')
+}
+
+sequential_usage <- function ()
 {
-    stop("Usage: pre-workflow.R <directory> [application](optional)\n   where <directory> contains CSV files of the workflow;\n   where [application](optional) is either cholesky or qrmumps.\n\n", call.=FALSE)
+    stop("Usage: pre-workflow.R <directory> [application](optional)
+            where <directory> contains CSV files of the workflow;
+            where [application](optional) is either cholesky or qrmumps.
+            If you want to run distributed, run with -D as first param.\n\n", call.=FALSE)
 }
 
 ##############################
@@ -20,59 +27,57 @@ usage <- function ()
 spark_usage <- function()
 {
     stop("Usage: pre-workflow.R -D <hdfs_directory> [spark_master][application](optional) [spark_home](optional)
-        \n   where -D means distributed over spark/hadoop execution;
-        \n   where <hdfs_directory> is the HDFS directory which contains large CSV files of the workflow [paje.state.csv];
-        \n   where <local_directory> is the local directory which contains small CSV files of the workflow [entities.csv];
-        \n   where [spark_master] is the MASTER parameter of a sparklyr connection;
-        \n   where [application](optional) is either cholesky or qrmumps;
-        \n   where [spark_home](optional) is the location of spark (only needed if SPARK_HOME environment variable isn't set);
-        \n   where -V (optional) means VERBOSE logs;
-        \n   where -TM (optional) means TIME MEASUREMENTS on.", call.=FALSE)
+           where -D means distributed over spark/hadoop execution;
+           where <hdfs_directory> is the HDFS directory which contains large CSV files of the workflow [paje.state.csv];
+           where <local_directory> is the local directory which contains small CSV files of the workflow [entities.csv];
+           where [spark_master] is the MASTER parameter of a sparklyr connection;
+           where [application](optional) is either cholesky or qrmumps;
+           where [spark_home](optional) is the location of spark (only needed if SPARK_HOME environment variable isn't set);", call.=FALSE)
 }
 
 applicationMode <- function() {
     list(sequential = "Sequential", distributed = "Distributed")
 }
 
-debugging <- TRUE;
+debugging <- FALSE;
 
 # Get the arguments to this script
 if(debugging == FALSE)
 {
     args = commandArgs(trailingOnly=TRUE)
     
-    if (length(args) < 1){
-        usage();
-        spark_usage()
+    if (length(args) < 1 || (args[[1]] != '-D' && args[[1]] != '-S')){
+        base_usage();
     }
     
     if(args[[1]] == '-D'){
-        input.mode <- applicationMode()$distributed;
-        input.hdfs_dir <- args[[2]];
-        if(length(args) > 2)
-            input.spark_master <- args[[3]]
-        if(length(args) > 3)
-            input.application <- args[[4]]
-        if(length(args) > 4)
-            input.spark_home <- args[[5]]
-        
-        for(val in args){
-            if(val == '-V'){
-                input.verbose = TRUE;
-            }
-            if(val == '-TM'){
-                input.time_measure = TRUE;
-            }
+        if(length(args) < 4){
+            spark_usage();
         }
         
+        input.mode <- applicationMode()$distributed;
+        input.hdfs_dir <- args[[2]];
+        input.local_dir <- args[[3]];
+        if(length(args) > 3)
+            input.spark_master <- args[[4]]
+        if(length(args) > 4)
+            input.application <- args[[5]]
+        if(length(args) > 5)
+            input.spark_home <- args[[6]]
+        else
+            input.spark_home <- NULL;
     }else{
-        input.mode <- applicationMode$sequential;
+        if(length(args) < 3){
+            sequential_usage();
+        }
+           
+        input.mode <- applicationMode()$sequential;
         if (length(args) < 2) {
             input.application = "";
         }else{
-            input.application = args[[2]];
+            input.application = args[[3]];
         }
-        input.directory = args[[1]];
+        input.directory = args[[2]];
         if ( is.null(input.directory) ){
             usage();
         }
@@ -85,8 +90,6 @@ if(debugging == FALSE)
     input.local_dir <- '/home/aksmiyazaki/tcc_data/5-v8-4_chifflet_8_6_2_dmdas_dpotrf_4_96000_960_false_ETHERNET10GB_true_r21909_10.dir/5-v8-4_chifflet_8_6_2_dmdas_dpotrf_4_96000_960_false_ETHERNET10GB_true_r21909_10_fxt'
     input.application <- 'cholesky';
     input.spark_home <- NULL;
-    input.verbose = TRUE;
-    input.time_measure = TRUE;
 }
 
 if (input.application == "cholesky"){
@@ -113,9 +116,13 @@ if(input.mode == applicationMode()$sequential){
                                  state_filter = states.filter,
                                  whichApplication = input.application);
 }else{
+    start_time <- Sys.time()
     sc <- setup_spark_env(spark_master = input.spark_master,
                           spark_home = input.spark_home);
+    end_time <- Sys.time()
+    loginfo(paste("[The spark setup took", paste0("{",end_time - start_time, "s}]")));
     
+    start_time <- Sys.time()
     data <- spark_reader_function(sc = sc,
                                   hdfs_directory = input.hdfs_dir,
                                   local_directory = input.local_dir,
