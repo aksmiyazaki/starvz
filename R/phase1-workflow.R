@@ -2,7 +2,7 @@
 library(starvz)
 library(sparklyr)
 library(dplyr)
-
+library(arrow)
 
 source("/home/aksmiyazaki/git/starvz/R_package/R/phase1_spark.R")
 
@@ -109,134 +109,141 @@ if (input.application == "cholesky"){
         states.filter = 0;
 }
     
-
+overall_start <- as.numeric(Sys.time())
 if(input.mode == applicationMode()$sequential){
+    start_time <- as.numeric(Sys.time())
     data <- the_reader_function (directory = input.directory,
                                  app_states_fun = states.fun,
                                  state_filter = states.filter,
                                  whichApplication = input.application);
+    end_time <- as.numeric(Sys.time())
+    loginfo(paste("[Reading and parsing all files took", paste0("{",(end_time - start_time), "s}]")));
 }else{
-    start_time <- Sys.time()
+    start_time <- as.numeric(Sys.time())
+    
     sc <- setup_spark_env(spark_master = input.spark_master,
                           spark_home = input.spark_home);
-    end_time <- Sys.time()
+    end_time <- as.numeric(Sys.time())
     loginfo(paste("[The spark setup took", paste0("{",end_time - start_time, "s}]")));
     
-    start_time <- Sys.time()
+    start_time <- as.numeric(Sys.time())
     data <- spark_reader_function(sc = sc,
                                   hdfs_directory = input.hdfs_dir,
                                   local_directory = input.local_dir,
                                   app_states_fun = states.fun,
                                   state_filter = states.filter,
                                   whichApplication = input.application);
+    end_time <- as.numeric(Sys.time())
+    loginfo(paste("[Reading and parsing all files took", paste0("{",end_time - start_time, "s}]")));
 }
 
 
 loginfo("Start Output Writting");
 
+start_time <- as.numeric(Sys.time())
 # State
 if(input.mode == applicationMode()$sequential)
 {
-    filename <- "pre.state.feather";
+    filename <- "pre.state.parquet";
     loginfo(paste("Writing", filename));
     if (!is.null(data$State)){
-        write_feather(data$State, filename);
+        write_parquet(data$State, filename);
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
     
-    filename <- "pre.variable.feather";
+    filename <- "pre.variable.parquet";
     loginfo(filename);
     if (!is.null(data$Variable)){
-        write_feather(data$Variable, filename);
+        write_parquet(data$Variable, filename);
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
     
-    filename <- "pre.link.feather";
+    filename <- "pre.link.parquet";
     loginfo(filename);
     if (!is.null(data$Link)){
-        write_feather(data$Link, filename);
+        write_parquet(data$Link, filename);
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
     
-    filename <- "pre.dag.feather";
+    filename <- "pre.dag.parquet";
     loginfo(filename);
     if (!is.null(data$DAG)){
-        write_feather(data$DAG, filename);
+        write_parquet(data$DAG, filename);
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
     
-    filename <- "pre.y.feather";
+    filename <- "pre.y.parquet";
     loginfo(filename);
     if (!is.null(data$Y)){
-        write_feather(data$Y, filename);
+        write_parquet(data$Y, filename);
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
     
-    filename <- "pre.atree.feather";
+    filename <- "pre.atree.parquet";
     loginfo(filename);
     if (!is.null(data$ATree)){
-        write_feather(data$ATree, filename);
+        write_parquet(data$ATree, filename);
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
     
-    filename <- "pre.gaps.feather";
+    filename <- "pre.gaps.parquet";
     loginfo(filename);
     if (!is.null(data$Gaps)){
-        write_feather(data$Gaps, filename);
+        write_parquet(data$Gaps, filename);
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
-    filename <- "pre.pmtool.feather";
+    filename <- "pre.pmtool.parquet";
     loginfo(filename);
     if (!is.null(data$pmtool)){
-        write_feather(data$pmtool, filename);
+        write_parquet(data$pmtool, filename);
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
-    filename <- "pre.pmtool_states.feather";
+    filename <- "pre.pmtool_states.parquet";
     loginfo(filename);
     if (!is.null(data$pmtool_states)){
-        write_feather(data$pmtool_states, filename);
+        write_parquet(data$pmtool_states, filename);
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
     
     # Data Rec
-    filename <- "pre.data_handles.feather";
+    filename <- "pre.data_handles.parquet";
     loginfo(filename);
     if (!is.null(data$data_handles)){
-        write_feather(data$data_handles, filename);
+        write_parquet(data$data_handles, filename);
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
     
     # Tasks Rec
-    filename <- "pre.tasks.feather";
+    filename <- "pre.tasks.parquet";
     loginfo(filename);
     if (!is.null(data$tasks)){
-        write_feather(data$tasks, filename);
+        write_parquet(data$tasks, filename);
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
     
-    filename <- "pre.task_handles.feather";
+    filename <- "pre.task_handles.parquet";
     loginfo(filename);
     if (!is.null(data$task_handles)){
-        write_feather(data$task_handles, filename);
+        write_parquet(data$task_handles, filename);
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
     
-    filename <- "pre.events.feather";
+    filename <- "pre.events.parquet";
     loginfo(filename);
     if (!is.null(data$Events)){
-        write_feather(data$Events, filename);
+        write_parquet(data$Events, filename);
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
@@ -307,4 +314,7 @@ if(input.mode == applicationMode()$sequential)
     spark_disconnect_all();
 }
 
+end_time <- as.numeric(Sys.time())
+loginfo(paste("[Writing all files took", paste0("{",end_time - start_time, "s}]")));
+loginfo(paste("[Entire Execution took", paste0("{",end_time - overall_start, "s}]")));
 loginfo("Pre-process finished correctly.");

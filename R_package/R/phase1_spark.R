@@ -394,6 +394,7 @@ spark_reader_function <- function (sc = NULL, hdfs_directory = ".", local_direct
     dfa <- sp_atree_load(sc = sc,
                          where = hdfs_directory);
 
+    start_time <- as.numeric(Sys.time())
     # Read states
     dfw <- sp_read_state_csv (sc = sc,
                               where = hdfs_directory,
@@ -401,6 +402,9 @@ spark_reader_function <- function (sc = NULL, hdfs_directory = ".", local_direct
                               state_filter=state_filter,
                               whichApplication = whichApplication) %>%
             sp_hl_y_coordinates(where = local_directory);
+
+    end_time <- as.numeric(Sys.time())
+    loginfo(paste("[State CSV took", paste0("{",end_time - start_time, "s}]")));
 
     # QRMumps case:
     # If the ATree is available and loaded, we create new columns for each task
@@ -415,14 +419,26 @@ spark_reader_function <- function (sc = NULL, hdfs_directory = ".", local_direct
     if((dfw %>% sdf_nrow) == 0) stop("After reading states, number of rows is zero.");
 
     # Read variables
+    start_time <- as.numeric(Sys.time())
     dfv <- sp_read_vars_set_new_zero(sc = sc, where = hdfs_directory);
 
+    end_time <- as.numeric(Sys.time())
+    loginfo(paste("[Variable CSV took", paste0("{",end_time - start_time, "s}]")));
+
     # Read links
+    start_time <- as.numeric(Sys.time())
     dfl <- sp_read_links (sc = sc, where = hdfs_directory);
 
+    end_time <- as.numeric(Sys.time())
+    loginfo(paste("[Link CSV took", paste0("{",end_time - start_time, "s}]")));
+
     # Read DAG
+    start_time <- as.numeric(Sys.time())
     dfdag <- sp_read_dag (sc = sc,
                           where = hdfs_directory, dfw, dfl);
+
+    end_time <- as.numeric(Sys.time())
+    loginfo(paste("[DAG CSV took", paste0("{",end_time - start_time, "s}]")));
 
     if (is.null(dfdag)){
         stop('DAG is NULL, maybe it is Vinicius Traces DAG.');
@@ -447,7 +463,11 @@ spark_reader_function <- function (sc = NULL, hdfs_directory = ".", local_direct
 
     # Read entities.csv and register the hierarchy (with Y coordinates)
     # Note that now it copies to a spark dataframe.
+    start_time <- as.numeric(Sys.time())
     dfhie <- copy_to(sc, hl_y_paje_tree (where = local_directory), overwrite = TRUE);
+
+    end_time <- as.numeric(Sys.time())
+    loginfo(paste("[Entities/Y CSV took", paste0("{",end_time - start_time, "s}]")));
 
     # PMTools information
     #dpmtb <- pmtools_bounds_csv_parser (where = directory);
@@ -468,15 +488,23 @@ spark_reader_function <- function (sc = NULL, hdfs_directory = ".", local_direct
     loginfo("Assembling the named list with the data from this case.");
 
     # Events
+    start_time <- as.numeric(Sys.time())
     devents <- sp_events_csv_parser (sc=sc,
                                   where = hdfs_directory);
+
+    end_time <- as.numeric(Sys.time())
+    loginfo(paste("[State CSV took", paste0("{",end_time - start_time, "s}]")));
 
     data <- list(DistributedOrigin=hdfs_directory, LocalOrigin=local_directory, State=dfw, Variable=dfv, Link=dfl, DAG=dfdag, Y=dfhie, ATree=dfa,
                  pmtool=dpmtb, pmtool_states=dpmts, data_handles=ddh, tasks=dtasks$tasks, task_handles=dtasks$handles, Events=devents);
 
     # Calculate the GAPS from the DAG
     if (whichApplication == "cholesky"){
+        start_time <- as.numeric(Sys.time())
         data$Gaps <- sp_gaps(data);
+
+        end_time <- as.numeric(Sys.time())
+        loginfo(paste("[Gaps Calculation took", paste0("{",end_time - start_time, "s}]")));
     }else{
         data$Gaps <- NULL;
     }

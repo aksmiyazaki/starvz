@@ -2,3 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
+
+R/derby\.log
+
+R/logs/log4j\.spark\.log
+
+R/sample_output\.log

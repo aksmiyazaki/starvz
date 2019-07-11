@@ -371,6 +371,7 @@ the_reader_function <- function (directory = ".", app_states_fun = NULL, state_f
     # Read the elimination tree
     dfa <- atree_load(where = directory);
 
+    start_time <- as.numeric(Sys.time())
     # Read states
     dfw <- read_state_csv (where = directory,
                            app_states_fun=app_states_fun,
@@ -378,6 +379,9 @@ the_reader_function <- function (directory = ".", app_states_fun = NULL, state_f
                            state_filter=state_filter,
                            whichApplication = whichApplication) %>%
         hl_y_coordinates(where = directory);
+
+    end_time <- as.numeric(Sys.time())
+    loginfo(paste("[State CSV took", paste0("{",end_time - start_time, "s}]")));
 
     # QRMumps case:
     # If the ATree is available and loaded, we create new columns for each task
@@ -391,13 +395,26 @@ the_reader_function <- function (directory = ".", app_states_fun = NULL, state_f
     if(dfw %>% nrow == 0) stop("After reading states, number of rows is zero.");
 
     # Read variables
+    start_time <- as.numeric(Sys.time())
     dfv <- read_vars_set_new_zero(where = directory);
 
+    end_time <- as.numeric(Sys.time())
+    loginfo(paste("[Variable CSV took", paste0("{",end_time - start_time, "s}]")));
+
     # Read links
+    start_time <- as.numeric(Sys.time())
     dfl <- read_links (where = directory);
 
+    end_time <- as.numeric(Sys.time())
+    loginfo(paste("[Link CSV took", paste0("{",end_time - start_time, "s}]")));
+
     # Read DAG
+    start_time <- as.numeric(Sys.time())
     dfdag <- read_dag (where = directory, dfw, dfl);
+
+    end_time <- as.numeric(Sys.time())
+    loginfo(paste("[DAG CSV took", paste0("{",end_time - start_time, "s}]")));
+
     if (is.null(dfdag)){
         # If dag is not available, try Vinicius DAG
         dagVinCSV <- paste0(directory, "/dag_vinicius.csv");
@@ -418,7 +435,11 @@ the_reader_function <- function (directory = ".", app_states_fun = NULL, state_f
     }
 
     # Read entities.csv and register the hierarchy (with Y coordinates)
+    start_time <- as.numeric(Sys.time())
     dfhie <- hl_y_paje_tree (where = directory);
+
+    end_time <- as.numeric(Sys.time())
+    loginfo(paste("[Entities/Y CSV took", paste0("{",end_time - start_time, "s}]")));
 
     # PMTools information
     dpmtb <- pmtools_bounds_csv_parser (where = directory);
@@ -434,14 +455,22 @@ the_reader_function <- function (directory = ".", app_states_fun = NULL, state_f
     loginfo("Assembling the named list with the data from this case.");
 
     # Events
+    start_time <- as.numeric(Sys.time())
     devents <- events_csv_parser (where = directory);
+
+    end_time <- as.numeric(Sys.time())
+    loginfo(paste("[State CSV took", paste0("{",end_time - start_time, "s}]")));
 
     data <- list(Origin=directory, State=dfw, Variable=dfv, Link=dfl, DAG=dfdag, Y=dfhie, ATree=dfa,
                  pmtool=dpmtb, pmtool_states=dpmts, data_handles=ddh, tasks=dtasks$tasks, task_handles=dtasks$handles, Events=devents);
 
     # Calculate the GAPS from the DAG
     if (whichApplication == "cholesky"){
+        start_time <- as.numeric(Sys.time())
         data$Gaps <- gaps(data);
+
+        end_time <- as.numeric(Sys.time())
+        loginfo(paste("[Gaps Calculation took", paste0("{",end_time - start_time, "s}]")));
     }else{
         data$Gaps <- NULL;
     }
