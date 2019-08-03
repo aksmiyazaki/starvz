@@ -1,10 +1,15 @@
 #!/usr/bin/Rscript
+
+.libPaths(c("/scratch/aksmiyazaki/Workdir/r_libs_user", .libPaths()))
+options(spark.install.dir="/scratch/aksmiyazaki/Workdir")
+
 library(starvz)
 library(sparklyr)
 library(dplyr)
 library(arrow)
 
-source("/home/aksmiyazaki/git/starvz/R_package/R/phase1_spark.R")
+source("/scratch/aksmiyazaki/Workdir/starvz/R_package/R/phase1_spark.R")
+#source("/home/aksmiyazaki/git/starvz/R_package/R/phase1_spark.R")
 
 ##############################
 # Usage                      #
@@ -45,16 +50,16 @@ debugging <- FALSE;
 if(debugging == FALSE)
 {
     args = commandArgs(trailingOnly=TRUE)
-    
+
     if (length(args) < 1 || (args[[1]] != '-D' && args[[1]] != '-S')){
         base_usage();
     }
-    
+
     if(args[[1]] == '-D'){
         if(length(args) < 4){
             spark_usage();
         }
-        
+
         input.mode <- applicationMode()$distributed;
         input.hdfs_dir <- args[[2]];
         input.local_dir <- args[[3]];
@@ -70,7 +75,7 @@ if(debugging == FALSE)
         if(length(args) < 3){
             sequential_usage();
         }
-           
+
         input.mode <- applicationMode()$sequential;
         if (length(args) < 2) {
             input.application = "";
@@ -108,7 +113,7 @@ if (input.application == "cholesky"){
         states.fun = cfd_colors;
         states.filter = 0;
 }
-    
+
 overall_start <- as.numeric(Sys.time())
 if(input.mode == applicationMode()$sequential){
     start_time <- as.numeric(Sys.time())
@@ -120,12 +125,12 @@ if(input.mode == applicationMode()$sequential){
     loginfo(paste("[Reading and parsing all files took", paste0("{",(end_time - start_time), "s}]")));
 }else{
     start_time <- as.numeric(Sys.time())
-    
+
     sc <- setup_spark_env(spark_master = input.spark_master,
                           spark_home = input.spark_home);
     end_time <- as.numeric(Sys.time())
     loginfo(paste("[The spark setup took", paste0("{",end_time - start_time, "s}]")));
-    
+
     start_time <- as.numeric(Sys.time())
     data <- spark_reader_function(sc = sc,
                                   hdfs_directory = input.hdfs_dir,
@@ -133,6 +138,7 @@ if(input.mode == applicationMode()$sequential){
                                   app_states_fun = states.fun,
                                   state_filter = states.filter,
                                   whichApplication = input.application);
+
     end_time <- as.numeric(Sys.time())
     loginfo(paste("[Reading and parsing all files took", paste0("{",end_time - start_time, "s}]")));
 }
@@ -151,7 +157,7 @@ if(input.mode == applicationMode()$sequential)
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
-    
+
     filename <- "pre.variable.parquet";
     loginfo(filename);
     if (!is.null(data$Variable)){
@@ -159,7 +165,7 @@ if(input.mode == applicationMode()$sequential)
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
-    
+
     filename <- "pre.link.parquet";
     loginfo(filename);
     if (!is.null(data$Link)){
@@ -167,7 +173,7 @@ if(input.mode == applicationMode()$sequential)
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
-    
+
     filename <- "pre.dag.parquet";
     loginfo(filename);
     if (!is.null(data$DAG)){
@@ -175,7 +181,7 @@ if(input.mode == applicationMode()$sequential)
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
-    
+
     filename <- "pre.y.parquet";
     loginfo(filename);
     if (!is.null(data$Y)){
@@ -183,7 +189,7 @@ if(input.mode == applicationMode()$sequential)
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
-    
+
     filename <- "pre.atree.parquet";
     loginfo(filename);
     if (!is.null(data$ATree)){
@@ -191,7 +197,7 @@ if(input.mode == applicationMode()$sequential)
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
-    
+
     filename <- "pre.gaps.parquet";
     loginfo(filename);
     if (!is.null(data$Gaps)){
@@ -213,7 +219,7 @@ if(input.mode == applicationMode()$sequential)
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
-    
+
     # Data Rec
     filename <- "pre.data_handles.parquet";
     loginfo(filename);
@@ -222,7 +228,7 @@ if(input.mode == applicationMode()$sequential)
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
-    
+
     # Tasks Rec
     filename <- "pre.tasks.parquet";
     loginfo(filename);
@@ -231,7 +237,7 @@ if(input.mode == applicationMode()$sequential)
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
-    
+
     filename <- "pre.task_handles.parquet";
     loginfo(filename);
     if (!is.null(data$task_handles)){
@@ -239,7 +245,7 @@ if(input.mode == applicationMode()$sequential)
     }else{
         loginfo(paste("Data for", filename, "has not been feathered because is empty."));
     }
-    
+
     filename <- "pre.events.parquet";
     loginfo(filename);
     if (!is.null(data$Events)){
@@ -251,66 +257,66 @@ if(input.mode == applicationMode()$sequential)
     filename <- paste0(input.hdfs_dir, '/', "pre.state.parquet");
     loginfo(paste("Writing", filename, 'on HDFS'));
     if (!is.null(data$State)){
-        spark_write_parquet(data$State %>% sdf_coalesce(1), filename, mode="overwrite");
+        spark_write_parquet(data$State, filename, mode="overwrite");
         loginfo(paste("Data for", filename, "has been successfully wrote."));
     }else{
         loginfo(paste("Data for", filename, "has not been written because is empty."));
-    } 
-    
+    }
+
     filename <- paste0(input.hdfs_dir, '/', "pre.variable.parquet");
     loginfo(paste("Writing", filename, 'on HDFS'));
     if (!is.null(data$Variable)){
-        spark_write_parquet(data$Variable %>% sdf_coalesce(1), filename, mode="overwrite");
+        spark_write_parquet(data$Variable, filename, mode="overwrite");
         loginfo(paste("Data for", filename, "has been successfully wrote."));
     }else{
         loginfo(paste("Data for", filename, "has not been written because is empty."));
     }
-    
+
     filename <- paste0(input.hdfs_dir, '/', "pre.link.parquet");
     loginfo(paste("Writing", filename, 'on HDFS'));
     if (!is.null(data$Link)){
-        spark_write_parquet(data$Link %>% sdf_coalesce(1), filename, mode="overwrite");
+        spark_write_parquet(data$Link, filename, mode="overwrite");
         loginfo(paste("Data for", filename, "has been successfully wrote."));
     }else{
         loginfo(paste("Data for", filename, "has not been written because is empty."));
     }
-    
+
     filename <- paste0(input.hdfs_dir, '/', "pre.dag.parquet");
     loginfo(paste("Writing", filename, 'on HDFS'));
     if (!is.null(data$DAG)){
-        spark_write_parquet(data$DAG %>% sdf_coalesce(1), filename, mode="overwrite");
+        spark_write_parquet(data$DAG, filename, mode="overwrite");
         loginfo(paste("Data for", filename, "has been successfully wrote."));
     }else{
         loginfo(paste("Data for", filename, "has not been written because is empty."));
     }
-    
+
     filename <- paste0(input.hdfs_dir, '/', "pre.y.parquet");
     loginfo(paste("Writing", filename, 'on HDFS'));
     if (!is.null(data$Y)){
-        spark_write_parquet(data$Y %>% sdf_coalesce(1), filename, mode="overwrite");
+        spark_write_parquet(data$Y, filename, mode="overwrite");
         loginfo(paste("Data for", filename, "has been successfully wrote."));
     }else{
         loginfo(paste("Data for", filename, "has not been written because is empty."));
     }
-    
+
     filename <- paste0(input.hdfs_dir, '/', "pre.atree.parquet");
     loginfo(paste("Writing", filename, 'on HDFS'));
     if (!is.null(data$ATree)){
-        spark_write_parquet(data$ATree %>% sdf_coalesce(1), filename, mode="overwrite");
+        spark_write_parquet(data$ATree, filename, mode="overwrite");
         loginfo(paste("Data for", filename, "has been successfully wrote."));
     }else{
         loginfo(paste("Data for", filename, "has not been written because is empty."));
     }
-    
+
     filename <- paste0(input.hdfs_dir, '/', "pre.events.parquet");
     loginfo(paste("Writing", filename, 'on HDFS'));
     if (!is.null(data$Events)){
-        spark_write_parquet(data$Events %>% sdf_coalesce(1), filename, mode="overwrite");
+        spark_write_parquet(data$Events, filename, mode="overwrite");
         loginfo(paste("Data for", filename, "has been successfully wrote."));
     }else{
         loginfo(paste("Data for", filename, "has not been written because is empty."));
     }
-    
+
     spark_disconnect_all();
 }
 

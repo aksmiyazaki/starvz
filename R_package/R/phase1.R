@@ -442,15 +442,20 @@ the_reader_function <- function (directory = ".", app_states_fun = NULL, state_f
     loginfo(paste("[Entities/Y CSV took", paste0("{",end_time - start_time, "s}]")));
 
     # PMTools information
-    dpmtb <- pmtools_bounds_csv_parser (where = directory);
+    #dpmtb <- pmtools_bounds_csv_parser (where = directory);
+    dpmtb <- NULL
 
-    dpmts <- pmtools_states_csv_parser (where = directory, whichApplication = whichApplication, Y=dfhie, States = dfw);
+    #dpmts <- pmtools_states_csv_parser (where = directory, whichApplication = whichApplication, Y=dfhie, States = dfw);
+    dpmts <- NULL
+
 
     # Data.rec
-    ddh <- data_handles_csv_parser (where = directory);
+    #ddh <- data_handles_csv_parser (where = directory);
+    ddh <- NULL
 
     # Tasks.rec
-    dtasks <- tasks_csv_parser (where = directory);
+    #dtasks <- tasks_csv_parser (where = directory);
+    dtasks <- NULL
 
     loginfo("Assembling the named list with the data from this case.");
 

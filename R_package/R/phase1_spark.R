@@ -493,10 +493,11 @@ spark_reader_function <- function (sc = NULL, hdfs_directory = ".", local_direct
                                   where = hdfs_directory);
 
     end_time <- as.numeric(Sys.time())
-    loginfo(paste("[State CSV took", paste0("{",end_time - start_time, "s}]")));
+    loginfo(paste("[Events CSV took", paste0("{",end_time - start_time, "s}]")));
 
     data <- list(DistributedOrigin=hdfs_directory, LocalOrigin=local_directory, State=dfw, Variable=dfv, Link=dfl, DAG=dfdag, Y=dfhie, ATree=dfa,
                  pmtool=dpmtb, pmtool_states=dpmts, data_handles=ddh, tasks=dtasks$tasks, task_handles=dtasks$handles, Events=devents);
+
 
     # Calculate the GAPS from the DAG
     if (whichApplication == "cholesky"){
